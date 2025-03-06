@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reproductor de La Hermosa Stereo</title>
+    <style>
+        .player-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #222;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 20px;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+        }
+
+        .player-logo img {
+            height: 40px;
+            border-radius: 5px;
+        }
+
+        .player-info {
+            flex: 1;
+            margin-left: 15px;
+            overflow: hidden;
+        }
+
+        .player-title {
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .player-song {
+            font-size: 12px;
+            color: #f39c12;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
+        }
+
+        .player-cover img {
+            width: 50px;
+            height: 50px;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+
+        .player-controls {
+            display: flex;
+            align-items: center;
+        }
+
+        .play-button {
+            background: #f39c12;
+            border: none;
+            color: white;
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .play-button:hover {
+            background: #e67e22;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="player-container">
+        <div class="player-logo">
+            <img src="https://i.postimg.cc/zVSqr4z8/logo.png" alt="La Hermosa Stereo">
+        </div>
+        <div class="player-cover">
+            <img id="album-cover" src="https://via.placeholder.com/50" alt="Carátula">
+        </div>
+        <div class="player-info">
+            <div class="player-title">La Hermosa Stereo</div>
+            <div class="player-song" id="song-info">Cargando...</div>
+        </div>
+        <div class="player-controls">
+            <button id="playPause" class="play-button">▶</button>
+        </div>
+    </div>
+
+    <audio id="radio" src="https://stream.zeno.fm/h70l9babrtfvv"></audio>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const audio = document.getElementById("radio");
+            const playPauseButton = document.getElementById("playPause");
+            const songInfo = document.getElementById("song-info");
+            const albumCover = document.getElementById("album-cover");
+            const apiKey = "0720adfcb2fd920d78f258652d52d398"; // 🔹 API Key de Last.fm
+
+            playPauseButton.addEventListener("click", function () {
+                if (audio.paused) {
+                    audio.play();
+                    playPauseButton.textContent = "⏸";
+                } else {
+                    audio.pause();
+                    playPauseButton.textContent = "▶";
+                }
+            });
+
+            function updateMetadata() {
+                fetch("https://api.zeno.fm/stations/h70l9babrtfvv/current_song/")
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data && data.title) {
+                            let songTitle = data.title;
+                            songInfo.textContent = songTitle;
+
+                            let [artist, track] = songTitle.split(" - ");
+                            if (!artist || !track) {
+                                artist = "Desconocido";
+                                track = songTitle;
+                            }
+
+                            // Buscar en Last.fm
+                            fetch(`https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${apiKey}&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(track)}&format=json`)
+                                .then(res => res.json())
+                                .then(lastFmData => {
+                                    if (lastFmData.track && lastFmData.track.album && lastFmData.track.album.image) {
+                                        let images = lastFmData.track.album.image;
+                                        albumCover.src = images[2]["#text"] || "https://via.placeholder.com/50"; // Imagen tamaño medio
+                                    } else {
+                                        albumCover.src = "https://via.placeholder.com/50";
+                                    }
+                                })
+                                .catch(err => console.error("Error en Last.fm API:", err));
+                        } else {
+                            songInfo.textContent = "Información no disponible";
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error obteniendo metadatos:", error);
+                        songInfo.textContent = "Error al cargar datos";
+                    });
+            }
+
+            setInterval(updateMetadata, 10000);
+            updateMetadata();
+        });
+    </script>
+
+</body>
+</html>
